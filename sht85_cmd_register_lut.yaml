@@ -1,0 +1,59 @@
+# LUT of command register hexadecimal addresses
+
+# SHT85 hex adress
+'address': 0x44
+
+# Single Shot Data Acquisition Mode and repeatability
+'single_shot':
+    'high': 0x2400
+    'medium': 0x240B
+    'low': 0x2416
+
+# Periodic Data Acquisition Mode mps
+'periodic':
+    0.5:
+        'high': 0x2032
+        'medium': 0x2024
+        'low': 0x202F
+    1:
+        'high': 0x2130
+        'medium': 0x2126
+        'low': 0x212D
+    2:
+        'high': 0x2236
+        'medium': 0x2220
+        'low': 0x222B
+    4:
+        'high': 0x2334
+        'medium': 0x2322
+        'low': 0x2329
+    10:
+        'high': 0x2737
+        'medium': 0x2721
+        'low': 0x272A
+
+# ART Command (accelerated response time) frequency of 4Hz
+'acc_resp_time': 0x2B32
+
+# Break command / Stop Periodic Data Acquisition Mode
+'stop': 0x3093
+
+# Soft Reset to force the system into a well-defined state without power cycle
+'soft_reset': 0x30A2
+
+# Heater for plausibility checking (only a few degrees centigrade)
+'heater':
+    'enable': 0x306D
+    'disable': 0x3066
+
+# Status register
+'status': 0xF32D
+
+# Clear status register
+'clear_status': 0x3041
+
+# Serial Number
+'sn': 0x3682
+
+# Read output
+'read': 0x00
