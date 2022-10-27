@@ -13,7 +13,7 @@ import yaml
 
 def hex_bytes(cmd):
     """Returns a list of hex bytes from hex number"""
-    return [hex(b) for b in divmod(cmd, 0x100)]
+    return [int(hex(b), 0) for b in divmod(cmd, 0x100)]
 
 
 def temp(data):
