@@ -8,8 +8,7 @@ Test script for basic SHT85 functionality
 import sht85
 import time
 
-if __name__ == '__main__()':
-
+if __name__ == '__main__':
     # Create SHT85 object
     mysensor = sht85.SHT85(bus=1, mps=1, rep='high')
 
