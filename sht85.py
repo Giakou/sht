@@ -1,90 +1,123 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# Modules
-import smbus
+"""
+SHT85 Python wrapper library of Adafruit_PureIO.smbus
+"""
+
+from Adafruit_PureIO import smbus
 import time
 import math
+import yaml
+
+
+def hex_bytes(cmd):
+    """Returns a list of hex bytes from hex number"""
+    return [hex(b) for b in divmod(cmd, 0x100)]
+
+
+def temp(data):
+    """Calculate temperature from data"""
+    t = data[0] << 8 | data[1]
+    return round(-45 + 175 * t / (2**16 - 1), 4)
+
+
+def relative_humidity(data):
+    """Calculate relative humidity from data"""
+    rh = data[3] << 8 | data[4]
+    return round(100 * rh / (2**16 - 1), 4)
+
+
+def sn(data):
+    """Extract S/N from data"""
+    return data[0] << 16 | data[4]
+
+
+def printer(func):
+    """Inform the user that write/read command was successful"""
+    def wrapper():
+        func()
+        print('Done!')
+    return wrapper
 
 
 class SHT85:
-    """WIP"""
-    def __init__(self, bus):
-        bus = smbus.SMBus(bus)
+    """SHT85 class"""
+    def __init__(self, bus, rep, mps):
+        """Constructor"""
 
-    def single_shot(self, rep='HIGH'):
-        """Single Shot Data Acquisition Mode
-        In this mode one issued measurement command triggers the acquisition of one data pair."""
+        # Open LUT with the command register addresses
+        with open('sht85_cmd_register_lut.yaml', 'r') as file:
+            self._lut = yaml.safe_load(file)
 
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_SS, [SHT85_SS_2[rep]])
+        # Assertion checks
+        assert bus not in [0, 2], f'Bus number "{bus}" is not allowed, because they are reserved! Choose another one! '
+        assert rep in self._lut['single_shot'].keys(), f'Repetition number "{rep}" is not allowed, ' \
+                                                       'only "high", "medium" or "low"!'
+        assert mps in self._lut['periodic'].keys(), f'Measurements per second number "{mps}" is not allowed, ' \
+                                                    'only "0.5", "1", "2", "4", "10"!'
+
+        # Define properties
+        self.bus = smbus.SMBus(bus)
+        self.rep = rep
+        self.mps = mps
+
+    def write_i2c_block_data_sht85(self, cmd):
+        """Wrapper function for writing block data to SHT85 sensor"""
+        self.bus.write_i2c_block_data(self._lut['address'], hex_bytes(cmd)[0], hex_bytes(cmd)[1:])
+
+    def read_i2c_block_data_sht85(self, length=32):
+        """Wrapper function for reading block data from SHT85 sensor"""
+        return self.bus.read_i2c_block_data(self._lut['address'], self._lut['read'], length)
+
+    def read_data(self, length=6):
+        """Readout data for Periodic Mode or ART feature"""
+        data = self.read_i2c_block_data_sht85(length)
+        return temp(data), relative_humidity(data)
+
+    def single_shot(self):
+        """Single Shot Data Acquisition Mode"""
+        self.write_i2c_block_data_sht85(self._lut['single_shot'][self.rep])
         time.sleep(0.5)
-        data = bus.read_i2c_block_data(SHT85_ADDR, SHT85_READ, 6)
-        t_data = data[0] << 8 | data[1]
-        h_data = data[3] << 8 | data[4]
-        temp = -45. + 175. * t_data / (2**16-1.)
-        relh = 100. * h_data / (2**16-1.)
-        return round(temp,4), round(relh,4)
+        self.read_data()
 
-    def periodic(self, mps=1, rep='HIGH'):
-        """Start Periodic Data Acquisition Mode
-        In this mode one issued measurement command yields a stream of data pairs.
-        In periodicmode different measurement commands can be selected.
-        They differ with respect to data acquisition frequency (0.5, 1, 2, 4 & 10 measurements per second, mps) and
-        repeatability (LOW, MEDIUM and HIGH, rep)."""
-        rep_dict = {'HIGH': 0, 'MEDIUM': 1, 'LOW': 2}
-        rep = rep_dict[rep]
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_P[mps], [SHT85_P_2[mps][rep]])
+    @printer
+    def periodic(self):
+        """Start Periodic Data Acquisition Mode"""
+        print(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and "{self.rep}" repetition...')
+        self.write_i2c_block_data_sht85(self._lut['periodic'][self.mps][self.rep])
         time.sleep(0.5e-3)
-        return 'Periodic Data Acquisition Mode started'
 
+    @printer
     def art(self):
-        """Start the ART (accelerated response time) feature
-        After issuing the ART command the sensor will start acquiring data with a frequency of 4Hz"""
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_ART, [SHT85_ART_2])
-        return 'ART Comannd started'
+        """Start the Accelerated Response Time (ART) feature"""
+        print('Activating Accelerated Response Time (ART)...')
+        self.write_i2c_block_data_sht85(self._lut['acc_resp_time'])
 
-    def read_data(self):
-        """Readout of Measurement Results for Periodic Mode or ART feature
-        Transmission  of  the  measurement  data  can  be  initiated  through  the  fetch  data  command.
-        After the read out command fetch data has been issued, the data memory is cleared"""
-        data = bus.read_i2c_block_data(SHT85_ADDR, SHT85_READ, 6)
-        t_data = data[0] << 8 | data[1]
-        h_data = data[3] << 8 | data[4]
-        temp = -45. + 175. * t_data / (2**16-1.)
-        relh = 100. * h_data / (2**16-1.)
-        return round(temp, 4), round(relh, 4)
-
+    @printer
     def stop(self):
-        """Break command / Stop Periodic Data Acquisition Mode or ART feature
-        It is recommended to stop the periodic data acquisition prior to sending another command
-        (except Fetch Data command) using the break command upon reception of the break command the sensor will abort
-        the ongoing measurement and enter the single shot mode. This takes 1ms."""
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_STOP, [SHT85_STOP_2])
-        return 'Break'
+        """Break command to stop Periodic Data Acquisition Mode or ART feature"""
+        print('Stopping Periodic Data Acquisition...')
+        self.write_i2c_block_data_sht85(self._lut['stop'])
 
+    @printer
     def reset(self):
-        """Soft Reset
-        A system reset of the SHT85 can be generated externally by issuing a command (soft reset).
-        Additionally, a system reset is generated internally during power-up. During the reset procedure the sensor will
-        not process commands."""
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_RESET, [SHT85_RESET_2])
-        return 'Reset'
+        """Apply Soft Reset"""
+        print('Applying Soft Reset...')
+        self.write_i2c_block_data_sht85(self._lut['soft_reset'])
 
-    def heater(self, heat='on'):
-        """Switch heater on/off
-        The SHT85is equipped with an internal heater, which is meant for plausibility checking only."""
-        if heat == 'on':
-            heat = SHT85_HEATER_ON
-        elif heat == 'off':
-            heat = SHT85_HEATER_OFF
-        bus.write_i2c_block_data(SHT85_ADDR,SHT85_HEATER,[heat])
-        return 'heater is ', heat
+    @printer
+    def heater(self, heat='enable'):
+        """Enable/disable heater"""
+        print(f'{heat} heater...')
+        assert heat in self._lut['heater'].keys(), 'You can only "enable" or "disable" the heater!'
+        self.write_i2c_block_data_sht85(self._lut['heater'][heat])
 
     def status(self):
-        """Status Register
-        The status register contains information on the operational status of the heater, the alert mode and on the
-        execution status of the last command and the last write sequence."""
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_STATUS, [SHT85_STATUS_2])
+        """Read Status Register"""
+        self.write_i2c_block_data_sht85(self._lut['status'])
         time.sleep(0.5e-3)
-        status_read = bus.read_i2c_block_data(SHT85_ADDR, SHT85_READ, 3)
+        status_read = self.read_i2c_block_data_sht85(3)
         status_to_bit = bin(status_read[0] << 8 | status_read[1])
         status_dict = {
             'checksum status': status_to_bit[0],
@@ -97,88 +130,24 @@ class SHT85:
         }
         return status_dict
 
+    @printer
     def clear(self):
-        """Clear Status Register
-        All flags (Bit 15, 11, 10, 4)in the status register can be cleared (set to zero)"""
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_CLEAR, [SHT85_CLEAR_2])
-        return 'Status Register cleared'
+        """Clear Status Register"""
+        print('Clearing Register Status...')
+        self.write_i2c_block_data_sht85(self._lut['clear_status'])
 
     def sn(self):
         """Output of the serial number"""
-        bus.write_i2c_block_data(SHT85_ADDR, SHT85_SN, [SHT85_SN_2])
+        self.write_i2c_block_data_sht85(self._lut['sn'])
         time.sleep(0.5e-3)
-        sn_read = bus.read_i2c_block_data(SHT85_ADDR, SHT85_READ, 6)
-        sn = sn_read[0] << 16 | sn_read[4]
-        return sn
+        data = self.read_i2c_block_data_sht85(6)
+        return sn(data)
 
     def dew_point(self, t, rh):
-        """Calculate dew point from temperature and rel. humidity."""
+        """Calculate dew point from temperature and relative humidity"""
         t_range = 'water' if t >= 0 else 'ice'
         tn = dict(water=243.12, ice=272.62)[t_range]
         m = dict(water=17.62, ice=22.46)[t_range]
 
-        dew_p = tn * (math.log(rh / 100.0) + (m * t) / (tn + t))/ (m - math.log(rh / 100.0) - m * t / (tn + t))
+        dew_p = tn * (math.log(rh / 100.0) + (m * t) / (tn + t)) / (m - math.log(rh / 100.0) - m * t / (tn + t))
         return round(dew_p, 4)
-
-
-if __name__ == '__main__()':
-    bus = smbus.SMBus(1)
-
-    # SHT85 hex adress
-    SHT85_ADDR = 0x44
-    # Single Shot Data Acquisition Mode
-    SHT85_SS = 0x24
-    # Repeatability: (HIGH, MEDIUM, LOW)
-    SHT85_SS_2 = {
-        'HIGH': 0x00,
-        'MEDIUM': 0x0B,
-        'LOW': 0x16
-    }
-    # Periodic Data Acquisition Mode mps
-    SHT85_P = {
-        0.5: 0x20,
-        1: 0x21,
-        2: 0x22,
-        4: 0x23,
-        10: 0x27
-    }
-    # Repeatability: (HIGH, MEDIUM, LOW)
-    SHT85_P_2 = {
-        0.5: (0x32, 0x24, 0x2F),
-        1: (0x30, 0x26, 0x2D),
-        2: (0x36, 0x20, 0x2B),
-        4: (0x34, 0x22, 0x29),
-        10: (0x37, 0x21, 0x2A)
-    }
-    # ART Command (accelerated response time) frequency of 4Hz
-    SHT85_ART = 0x2B
-    SHT85_ART_2 = 0x32
-    # Break command / Stop Periodic Data Acquisition Mode
-    SHT85_STOP = 0x30
-    SHT85_STOP_2 = 0x93
-    # Soft Reset
-    SHT85_RESET = 0x30
-    SHT85_RESET_2 = 0xA2
-    # Heater for plausibility checking
-    SHT85_HEATER = 0x30
-    # enable
-    SHT85_HEATER_ON = 0x6D
-    # disable
-    SHT85_HEATER_OFF = 0x66
-    # Status Register
-    SHT85_STATUS = 0xF3
-    SHT85_STATUS_2 = 0x2D
-    # Clear Status Register
-    SHT85_CLEAR = 0x30
-    SHT85_CLEAR_2 = 0x41
-    # Serial Number
-    SHT85_SN = 0x36
-    SHT85_SN_2 = 0x82
-    # Read output
-    SHT85_READ = 0x00
-
-
-
-
-
-
