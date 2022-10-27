@@ -1,26 +1,37 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+Test script for basic SHT85 functionality
+"""
+
 import sht85
 import time
 
-mps = 1 # accepted intervals 0.5, 1, 2, 4, 10 seconds
-rep = 'HIGH' # Repeatability: HIGH, MEDIUM, LOW
+if __name__ == '__main__()':
 
-print 'serial number = ', sht85.sn()
-time.sleep(0.5e-3)
+    # Create SHT85 object
+    mysensor = sht85.SHT85(bus=1, mps=1, rep='high')
 
-sht85.periodic(mps,rep)
-time.sleep(1)
-try:
-    while True:
-        t,rh = sht85.read_data()
-        dp = sht85.dew_point(t,rh)
-        print 'Temperature =', t
-        print 'Relative Humidity =', rh
-        print 'Dew Point =', dp
-        time.sleep(mps)
-
-except (KeyboardInterrupt, SystemExit): #when you press ctrl+c
-    print("Killing Thread...")
+    # Check S/N
+    print('serial number = ', mysensor.sn())
     time.sleep(0.5e-3)
-    sht85.stop()
 
-sht85.stop()
+    # Start periodic measurement
+    mysensor.periodic()
+    time.sleep(1)
+
+    try:
+        while True:
+            t, rh = mysensor.read_data()
+            dp = mysensor.dew_point(t, rh)
+            print(f'Temperature = {t} deg')
+            print(f'Relative Humidity = {rh}%')
+            print(f'Dew Point = {dp} degrees')
+            time.sleep(mysensor.mps)
+
+    except (KeyboardInterrupt, SystemExit):
+        print("Killing Thread...")
+        time.sleep(0.5e-3)
+    finally:
+        mysensor.stop()
