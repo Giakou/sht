@@ -37,8 +37,8 @@ def sn(data):
 def printer(func):
     """Decorator function to Inform the user that write/read command was successful"""
     @functools.wraps(func)
-    def wrapper(**kwargs):
-        func(**kwargs)
+    def wrapper(self, **kwargs):
+        func(self, **kwargs)
         print('Done!')
     return wrapper
 
