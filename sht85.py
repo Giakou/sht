@@ -9,6 +9,7 @@ from Adafruit_PureIO import smbus
 import time
 import math
 import yaml
+import functools
 
 
 def hex_bytes(cmd):
@@ -34,9 +35,10 @@ def sn(data):
 
 
 def printer(func):
-    """Inform the user that write/read command was successful"""
-    def wrapper():
-        func()
+    """Decorator function to Inform the user that write/read command was successful"""
+    @functools.wraps(func)
+    def wrapper(**kwargs):
+        func(**kwargs)
         print('Done!')
     return wrapper
 
