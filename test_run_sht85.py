@@ -13,7 +13,7 @@ if __name__ == '__main__':
     mysensor = sht85.SHT85(bus=1, mps=1, rep='high')
 
     # Check S/N
-    print('serial number = ', mysensor.sn())
+    print('serial number = ', mysensor.sn)
     time.sleep(0.5e-3)
 
     # Start periodic measurement
@@ -22,11 +22,10 @@ if __name__ == '__main__':
 
     try:
         while True:
-            t, rh = mysensor.read_data()
-            dp = mysensor.dew_point(t, rh)
-            print(f'Temperature = {t} deg')
-            print(f'Relative Humidity = {rh}%')
-            print(f'Dew Point = {dp} degrees')
+            mysensor.read_data()
+            print(f'Temperature = {mysensor.t} deg')
+            print(f'Relative Humidity = {mysensor.rh}%')
+            print(f'Dew Point = {mysensor.dp} degrees')
             time.sleep(mysensor.mps)
 
     except (KeyboardInterrupt, SystemExit):
