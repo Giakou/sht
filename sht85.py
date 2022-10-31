@@ -20,13 +20,15 @@ def hex_bytes(cmd):
 def temp(data):
     """Calculate temperature from data"""
     t = data[0] << 8 | data[1]
-    return round(-45 + 175 * t / (2**16 - 1), 4)
+    # Significant digits based on the SHT85 resolution of 0.01 degrees Celsius
+    return round(-45 + 175 * t / (2**16 - 1), 2)
 
 
 def relative_humidity(data):
     """Calculate relative humidity from data"""
     rh = data[3] << 8 | data[4]
-    return round(100 * rh / (2**16 - 1), 4)
+    # Significant digits based on the SHT85 resolution of 0.01 %RH
+    return round(100 * rh / (2**16 - 1), 2)
 
 
 def sn(data):
