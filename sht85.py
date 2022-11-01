@@ -14,6 +14,29 @@ import functools
 from Adafruit_PureIO import smbus
 
 
+# Magnus coefficients from
+# https://sensirion.com/media/documents/8AB2AD38/61642ADD/Sensirion_AppNotes_Humidity_Sensors_Introduction_to_Relative_Humidit.pdf
+MC = {
+    'water': {
+        'alpha': 6.112,  # in hPa
+        'beta': 17.62,
+        'lambda': 243.12  # in degrees Celsius
+    },
+    'ice': {
+        'alpha': 6.112,  # in hPa
+        'beta': 22.46,
+        'lambda': 272.62  # in degrees Celsius
+    }
+}
+
+# Waiting times based on repeatability setting in seconds
+WT = {
+    'high': 0.016,
+    'medium': 0.007,
+    'low': 0.005
+}
+
+
 def hex_bytes(cmd):
     """Returns a list of hex bytes from hex number"""
     return [int(hex(b), 0) for b in divmod(cmd, 0x100)]
@@ -22,13 +45,29 @@ def hex_bytes(cmd):
 def temp(data):
     """Calculate temperature from data"""
     t = data[0] << 8 | data[1]
-    return round(-45 + 175 * t / (2**16 - 1), 4)
+    # Significant digits based on the SHT85 resolution of 0.01 degrees Celsius
+    return round(-45 + 175 * t / (2**16 - 1), 2)
 
 
 def relative_humidity(data):
     """Calculate relative humidity from data"""
     rh = data[3] << 8 | data[4]
-    return round(100 * rh / (2**16 - 1), 4)
+    # Significant digits based on the SHT85 resolution of 0.01 %RH
+    return round(100 * rh / (2**16 - 1), 2)
+
+
+def dew_point(t, rh):
+    """Calculate dew point from temperature and relative humidity using Magnus formula. For more info:
+    https://sensirion.com/media/documents/8AB2AD38/61642ADD/Sensirion_AppNotes_Humidity_Sensors_Introduction_to_Relative_Humidit.pdf"""
+
+    t_range = 'water' if t >= 0 else 'ice'
+    # Define some custom constants to make the Magnus formula more readable
+    c1 = MC[t_range]['beta'] * t / (MC[t_range]['lambda'] + t)
+    c2 = math.log(rh / 100.0)
+
+    # Magnus formula for calculating the dew point
+    dew_p = MC[t_range]['lambda'] * (c2 + c1) / (MC[t_range]['beta'] - c2 - c1)
+    return round(dew_p, 2)
 
 
 def sn(data):
@@ -65,24 +104,36 @@ class SHT85:
         self.bus = smbus.SMBus(bus)
         self.rep = rep
         self.mps = mps
+        self.t = None
+        self.rh = None
+        self.dp = None
+
+    @property
+    def sn(self):
+        """Output of the serial number"""
+        self.write_i2c_block_data_sht85(self._lut['sn'])
+        data = self.read_i2c_block_data_sht85(6)
+        return sn(data)
 
     def write_i2c_block_data_sht85(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
         self.bus.write_i2c_block_data(self._lut['address'], hex_bytes(cmd)[0], hex_bytes(cmd)[1:])
+        time.sleep(WT[self.rep])
 
     def read_i2c_block_data_sht85(self, length=32):
         """Wrapper function for reading block data from SHT85 sensor"""
         return self.bus.read_i2c_block_data(self._lut['address'], self._lut['read'], length)
 
     def read_data(self, length=6):
-        """Readout data for Periodic Mode or ART feature"""
+        """Readout data for Periodic Mode or ART feature and update the properties"""
         data = self.read_i2c_block_data_sht85(length)
-        return temp(data), relative_humidity(data)
+        self.t = temp(data)
+        self.rh = relative_humidity(data)
+        self.dp = dew_point(self.t, self.rh)
 
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
         self.write_i2c_block_data_sht85(self._lut['single_shot'][self.rep])
-        time.sleep(0.5)
         self.read_data()
 
     @printer
@@ -90,7 +141,6 @@ class SHT85:
         """Start Periodic Data Acquisition Mode"""
         print(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and "{self.rep}" repetition...')
         self.write_i2c_block_data_sht85(self._lut['periodic'][self.mps][self.rep])
-        time.sleep(0.5e-3)
 
     @printer
     def art(self):
@@ -120,7 +170,6 @@ class SHT85:
     def status(self):
         """Read Status Register"""
         self.write_i2c_block_data_sht85(self._lut['status'])
-        time.sleep(0.5e-3)
         status_read = self.read_i2c_block_data_sht85(3)
         status_to_bit = bin(status_read[0] << 8 | status_read[1])
         status_dict = {
@@ -139,19 +188,3 @@ class SHT85:
         """Clear Status Register"""
         print('Clearing Register Status...')
         self.write_i2c_block_data_sht85(self._lut['clear_status'])
-
-    def sn(self):
-        """Output of the serial number"""
-        self.write_i2c_block_data_sht85(self._lut['sn'])
-        time.sleep(0.5e-3)
-        data = self.read_i2c_block_data_sht85(6)
-        return sn(data)
-
-    def dew_point(self, t, rh):
-        """Calculate dew point from temperature and relative humidity"""
-        t_range = 'water' if t >= 0 else 'ice'
-        tn = dict(water=243.12, ice=272.62)[t_range]
-        m = dict(water=17.62, ice=22.46)[t_range]
-
-        dew_p = tn * (math.log(rh / 100.0) + (m * t) / (tn + t)) / (m - math.log(rh / 100.0) - m * t / (tn + t))
-        return round(dew_p, 4)
