@@ -5,11 +5,14 @@
 SHT85 Python wrapper library of Adafruit_PureIO.smbus
 """
 
-from Adafruit_PureIO import smbus
 import time
+import os
 import math
 import yaml
 import functools
+
+from Adafruit_PureIO import smbus
+
 
 # Magnus coefficients from
 # https://sensirion.com/media/documents/8AB2AD38/61642ADD/Sensirion_AppNotes_Humidity_Sensors_Introduction_to_Relative_Humidit.pdf
@@ -87,7 +90,7 @@ class SHT85:
         """Constructor"""
 
         # Open LUT with the command register addresses
-        with open('sht85_cmd_register_lut.yaml', 'r') as file:
+        with open(os.path.join(os.path.dirname(__file__), 'sht85_cmd_register_lut.yaml'), 'r') as file:
             self._lut = yaml.safe_load(file)
 
         # Assertion checks
