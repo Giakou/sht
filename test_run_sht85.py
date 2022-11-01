@@ -14,15 +14,11 @@ if __name__ == '__main__':
 
     # Check S/N
     print('serial number = ', mysensor.sn)
-    time.sleep(0.5e-3)
-
-    # Start periodic measurement
-    mysensor.periodic()
-    time.sleep(1)
 
     try:
         while True:
-            mysensor.read_data()
+            # Single shot mode is preferred due to less current consumption (x8-x200) in idle state
+            mysensor.single_shot()
             print(f'Temperature = {mysensor.t} deg')
             print(f'Relative Humidity = {mysensor.rh}%')
             print(f'Dew Point = {mysensor.dp} degrees')
@@ -30,6 +26,5 @@ if __name__ == '__main__':
 
     except (KeyboardInterrupt, SystemExit):
         print("Killing Thread...")
-        time.sleep(0.5e-3)
     finally:
         mysensor.stop()

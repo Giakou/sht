@@ -26,6 +26,13 @@ MC = {
     }
 }
 
+# Waiting times based on repeatability setting in seconds
+WT = {
+    'high': 0.016,
+    'medium': 0.007,
+    'low': 0.005
+}
+
 
 def hex_bytes(cmd):
     """Returns a list of hex bytes from hex number"""
@@ -102,13 +109,13 @@ class SHT85:
     def sn(self):
         """Output of the serial number"""
         self.write_i2c_block_data_sht85(self._lut['sn'])
-        time.sleep(0.5e-3)
         data = self.read_i2c_block_data_sht85(6)
         return sn(data)
 
     def write_i2c_block_data_sht85(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
         self.bus.write_i2c_block_data(self._lut['address'], hex_bytes(cmd)[0], hex_bytes(cmd)[1:])
+        time.sleep(WT[self.rep])
 
     def read_i2c_block_data_sht85(self, length=32):
         """Wrapper function for reading block data from SHT85 sensor"""
@@ -124,7 +131,6 @@ class SHT85:
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
         self.write_i2c_block_data_sht85(self._lut['single_shot'][self.rep])
-        time.sleep(0.5)
         self.read_data()
 
     @printer
@@ -132,7 +138,6 @@ class SHT85:
         """Start Periodic Data Acquisition Mode"""
         print(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and "{self.rep}" repetition...')
         self.write_i2c_block_data_sht85(self._lut['periodic'][self.mps][self.rep])
-        time.sleep(0.5e-3)
 
     @printer
     def art(self):
@@ -162,7 +167,6 @@ class SHT85:
     def status(self):
         """Read Status Register"""
         self.write_i2c_block_data_sht85(self._lut['status'])
-        time.sleep(0.5e-3)
         status_read = self.read_i2c_block_data_sht85(3)
         status_to_bit = bin(status_read[0] << 8 | status_read[1])
         status_dict = {
