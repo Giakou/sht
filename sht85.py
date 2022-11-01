@@ -5,11 +5,13 @@
 SHT85 Python wrapper library of Adafruit_PureIO.smbus
 """
 
-from Adafruit_PureIO import smbus
 import time
+import os
 import math
 import yaml
 import functools
+
+from Adafruit_PureIO import smbus
 
 
 def hex_bytes(cmd):
@@ -49,7 +51,7 @@ class SHT85:
         """Constructor"""
 
         # Open LUT with the command register addresses
-        with open('sht85_cmd_register_lut.yaml', 'r') as file:
+        with open(os.path.join(os.path.dirname(__file__), 'sht85_cmd_register_lut.yaml'), 'r') as file:
             self._lut = yaml.safe_load(file)
 
         # Assertion checks
