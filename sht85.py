@@ -51,9 +51,12 @@ def temp(data):
 
 def relative_humidity(data):
     """Calculate relative humidity from data"""
-    rh = data[3] << 8 | data[4]
+    rh_digital = data[3] << 8 | data[4]
     # Significant digits based on the SHT85 resolution of 0.01 %RH
-    return round(100 * rh / (2**16 - 1), 5)
+    rh_analog = round(100 * rh_digital / (2**16 - 1), 2)
+    # Make sure that relative humidity never returns a 0% value, otherwise the dew point calculation will fail
+    rh_analog = 1e-6 if rh_analog < 0.01 else rh_analog
+    return rh_analog
 
 
 def dew_point(t, rh):
@@ -63,8 +66,6 @@ def dew_point(t, rh):
     t_range = 'water' if t >= 0 else 'ice'
     # Define some custom constants to make the Magnus formula more readable
     c1 = MC[t_range]['beta'] * t / (MC[t_range]['lambda'] + t)
-    if rh < 0.1:
-        rh = 0.1
     c2 = math.log(rh / 100.0)
 
     # Magnus formula for calculating the dew point
