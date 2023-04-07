@@ -146,6 +146,12 @@ class SHT85:
         self.write_i2c_block_data_sht85(self._lut['periodic'][self.mps][self.rep])
 
     @printer
+    def fetch(self):
+        """Fetch command to transmit the measurement data. After the transmission the data memory is cleared"""
+        print('Fetching data...')
+        self.write_i2c_block_data_sht85(self._lut['fetch'])
+
+    @printer
     def art(self):
         """Start the Accelerated Response Time (ART) feature"""
         print('Activating Accelerated Response Time (ART)...')
@@ -162,6 +168,13 @@ class SHT85:
         """Apply Soft Reset"""
         print('Applying Soft Reset...')
         self.write_i2c_block_data_sht85(self._lut['soft_reset'])
+
+    @printer
+    def general_call_reset(self):
+        """General Call mode to rese all devices on the same I2C bus line (not device specific!). This command only
+        works if the device is able to process I2C commands."""
+        print('Applying General Call Reset... This is not device specific!')
+        self.bus.write_i2c_block_data(self._lut['general_call_reset'])
 
     @printer
     def heater(self, heat='enable'):
