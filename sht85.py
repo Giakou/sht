@@ -111,7 +111,7 @@ class SHT85:
         self.write_i2c_block_data_sht85(self._lut['sn'])
         buffer = self.read_i2c_block_data_sht85(6)
         self.check_crc(buffer, kw='sn')
-        return buffer[0] << 16 | buffer[4]
+        return (buffer[0] << 24) + (buffer[1] << 16) + (buffer[3] << 8) + buffer[4]
 
     @property
     def status(self):
