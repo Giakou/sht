@@ -152,9 +152,9 @@ class SHT85:
             return crc & 0xFF  # return the bottom 8 bits
 
     def check_crc(self, data):
-        if data[0:2] != self.crc8(data[2]):
+        if data[2] != self.crc8(data[0:2]):
             warnings.warn('CRC Error in temperature measurement!')
-        if data[3:5] != self.crc8(data[5]):
+        if data[5] != self.crc8(data[3:5]):
             warnings.warn('CRC Error in relative humidity measurement!')
 
     def single_shot(self):
