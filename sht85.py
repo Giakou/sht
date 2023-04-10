@@ -110,7 +110,7 @@ class SHT85:
         """Output of the serial number"""
         self.write_i2c_block_data_sht85(self._lut['sn'])
         buffer = self.read_i2c_block_data_sht85(6)
-        self.check_crc(buffer)
+        self.check_crc(buffer, kw='sn')
         return buffer[0] << 16 | buffer[4]
 
     @property
