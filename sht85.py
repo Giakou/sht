@@ -183,12 +183,13 @@ class SHT85:
     @printer
     def stop(self):
         """Break command to stop Periodic Data Acquisition Mode or ART feature"""
-        print('Stopping Periodic Data Acquisition...')
+        print('Issuing Break Command...')
         self.write_i2c_block_data_sht85(self._lut['stop'])
 
     @printer
     def reset(self):
         """Apply Soft Reset"""
+        self.stop()
         print('Applying Soft Reset...')
         self.write_i2c_block_data_sht85(self._lut['soft_reset'])
 
