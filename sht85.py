@@ -43,16 +43,14 @@ def hex_bytes(cmd):
     return [int(hex(b), 0) for b in divmod(cmd, 0x100)]
 
 
-def temp(data):
+def temp(temp_digital):
     """Calculate temperature from data"""
-    t = data[0] << 8 | data[1]
     # Significant digits based on the SHT85 resolution of 0.01 degrees Celsius
-    return round(-45 + 175 * t / (2**16 - 1), 2)
+    return round(-45 + 175 * temp_digital / (2**16 - 1), 2)
 
 
-def relative_humidity(data):
+def relative_humidity(rh_digital):
     """Calculate relative humidity from data"""
-    rh_digital = data[3] << 8 | data[4]
     # Significant digits based on the SHT85 resolution of 0.01 %RH
     rh_analog = round(100 * rh_digital / (2**16 - 1), 2)
     # Make sure that relative humidity never returns a 0% value, otherwise the dew point calculation will fail
@@ -72,11 +70,6 @@ def dew_point(t, rh):
     # Magnus formula for calculating the dew point
     dew_p = MC[t_range]['lambda'] * (c2 + c1) / (MC[t_range]['beta'] - c2 - c1)
     return round(dew_p, 2)
-
-
-def sn(data):
-    """Extract S/N from data"""
-    return data[0] << 16 | data[4]
 
 
 def printer(func):
@@ -116,8 +109,26 @@ class SHT85:
     def sn(self):
         """Output of the serial number"""
         self.write_i2c_block_data_sht85(self._lut['sn'])
-        data = self.read_i2c_block_data_sht85(6)
-        return sn(data)
+        buffer = self.read_i2c_block_data_sht85(6)
+        self.check_crc(buffer)
+        return buffer[0] << 16 | buffer[4]
+
+    @property
+    def status(self):
+        """Read Status Register"""
+        self.write_i2c_block_data_sht85(self._lut['status'])
+        status_read = self.read_i2c_block_data_sht85(3)
+        status_to_bit = bin(status_read[0] << 8 | status_read[1])
+        status_dict = {
+            'checksum status': status_to_bit[0],
+            'Command status': status_to_bit[1],
+            'System reset': status_to_bit[4],
+            'T tracking alert': status_to_bit[10],
+            'RH tracking alert': status_to_bit[11],
+            'Heater status': status_to_bit[13],
+            'Alert pending status': status_to_bit[15]
+        }
+        return status_dict
 
     def write_i2c_block_data_sht85(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
@@ -132,8 +143,10 @@ class SHT85:
         """Readout data for Periodic Mode or ART feature and update the properties"""
         # The measurement data consists of 6 bytes (2 for each measurement value and 1 for each checksum)
         data = self.read_i2c_block_data_sht85(6)
-        self.t = temp(data)
-        self.rh = relative_humidity(data)
+        temp_digital = data[0] << 8 | data[1]
+        self.t = temp(temp_digital)
+        rh_digital = data[3] << 8 | data[4]
+        self.rh = relative_humidity(rh_digital)
         self.check_crc(data)
         self.dp = dew_point(self.t, self.rh)
 
@@ -151,11 +164,17 @@ class SHT85:
                     crc = crc << 1
             return crc & 0xFF  # return the bottom 8 bits
 
-    def check_crc(self, data):
-        if data[2] != self.crc8(data[0:2]):
-            warnings.warn('CRC Error in temperature measurement!')
-        if data[5] != self.crc8(data[3:5]):
-            warnings.warn('CRC Error in relative humidity measurement!')
+    def check_crc(self, buffer, kw='data'):
+        if buffer[2] != self.crc8(buffer[0:2]):
+            if kw == 'data':
+                warnings.warn('CRC Error in temperature measurement!')
+            else:
+                warnings.warn('CRC Error in the first word!')
+        if buffer[5] != self.crc8(buffer[3:5]):
+            if kw == 'data':
+                warnings.warn('CRC Error in relative humidity measurement!')
+            else:
+                warnings.warn('CRC Error in the second word!')
 
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
@@ -206,22 +225,6 @@ class SHT85:
         print(f'{heat} heater...')
         assert heat in self._lut['heater'].keys(), 'You can only "enable" or "disable" the heater!'
         self.write_i2c_block_data_sht85(self._lut['heater'][heat])
-
-    def status(self):
-        """Read Status Register"""
-        self.write_i2c_block_data_sht85(self._lut['status'])
-        status_read = self.read_i2c_block_data_sht85(3)
-        status_to_bit = bin(status_read[0] << 8 | status_read[1])
-        status_dict = {
-            'checksum status': status_to_bit[0],
-            'Command status': status_to_bit[1],
-            'System reset': status_to_bit[4],
-            'T tracking alert': status_to_bit[10],
-            'RH tracking alert': status_to_bit[11],
-            'Heater status': status_to_bit[13],
-            'Alert pending status': status_to_bit[15]
-        }
-        return status_dict
 
     @printer
     def clear(self):
