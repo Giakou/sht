@@ -119,7 +119,7 @@ class SHT85:
         self.write_i2c_block_data_sht85(self._lut['status'])
         status_read = self.read_i2c_block_data_sht85(3)
         status = status_read[0] << 8 | status_read[1]
-        status_to_bit = f'{status:16b}'
+        status_to_bit = f'{status:016b}'
         status_dict = {
             'checksum status': status_to_bit[0],
             'Command status': status_to_bit[1],
