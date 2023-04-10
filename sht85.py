@@ -10,6 +10,7 @@ import os
 import math
 import yaml
 import functools
+import warnings
 
 from Adafruit_PureIO import smbus
 
@@ -127,12 +128,34 @@ class SHT85:
         """Wrapper function for reading block data from SHT85 sensor"""
         return self.bus.read_i2c_block_data(self._lut['address'], self._lut['read'], length)
 
-    def read_data(self, length=6):
+    def read_data(self):
         """Readout data for Periodic Mode or ART feature and update the properties"""
-        data = self.read_i2c_block_data_sht85(length)
+        # The measurement data consists of 6 bytes (2 for each measurement value and 1 for each checksum)
+        data = self.read_i2c_block_data_sht85(6)
         self.t = temp(data)
         self.rh = relative_humidity(data)
+        self.check_crc(data)
         self.dp = dew_point(self.t, self.rh)
+
+    def crc8(self, buffer):
+        """CRC-8 checksum verification"""
+        # Initialize the checksum
+        crc = 0xFF
+        for byte in buffer:
+            # Perform XOR operation between the crc and the byte
+            crc ^= byte
+            for _ in range(8):
+                if crc & 0x80:
+                    crc = (crc << 1) ^ 0x31
+                else:
+                    crc = crc << 1
+            return crc & 0xFF  # return the bottom 8 bits
+
+    def check_crc(self, data):
+        if data[0:2] != self.crc8(data[2]):
+            warnings.warn('CRC Error in temperature measurement!')
+        if data[3:5] != self.crc8(data[5]):
+            warnings.warn('CRC Error in relative humidity measurement!')
 
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
