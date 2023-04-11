@@ -121,7 +121,7 @@ class SHT85:
         status = status_read[0] << 8 | status_read[1]
         status_to_bit = f'{status:016b}'
         status_dict = {
-            'checksum status': status_to_bit[0],
+            'Checksum status': status_to_bit[0],
             'Command status': status_to_bit[1],
             'System reset': status_to_bit[4],
             'T tracking alert': status_to_bit[10],
@@ -130,6 +130,36 @@ class SHT85:
             'Alert pending status': status_to_bit[15]
         }
         return status_dict
+
+    def check_status_for_non_default(self):
+        """Check Status Register for non-default values"""
+        status = self.status
+        default_status_dict = {
+            'Checksum status': '0',
+            'Command status': '0',
+            'System reset': '1',
+            'T tracking alert': '0',
+            'RH tracking alert': '0',
+            'Heater status': '0',
+            'Alert pending status': '1'
+        }
+        non_default_status_dict = {key: value for key, value in status.items() if value != default_status_dict[key]}
+        for key, value in non_default_status_dict.items():
+            if key == 'Checksum status':
+                warnings.warn('Checksum of last write transfer failed!')
+            elif key == 'Command status':
+                warnings.warn('Last command not processed! It was either invalid or failed the integrated command '
+                              'checksum!')
+            elif key == 'System reset':
+                warnings.warn('no reset detected since last "clearstatus register" command!')
+            elif key == 'T tracking alert':
+                warnings.warn('T tracking alert!')
+            elif key == 'RH tracking alert':
+                warnings.warn('RH tracking alert!')
+            elif key == 'Heater status':
+                warnings.warn('Heater is ON!')
+            elif key == 'Alert pending status':
+                warnings.warn('No pending alerts!')
 
     def write_i2c_block_data_sht85(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
