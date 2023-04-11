@@ -248,7 +248,9 @@ class SHT85:
         """General Call mode to rese all devices on the same I2C bus line (not device specific!). This command only
         works if the device is able to process I2C commands."""
         print('Applying General Call Reset... This is not device specific!')
-        self.bus.write_i2c_block_data(self._lut['general_call_reset'])
+        # TODO: Does SHT85 actually support receiving commands via the I2C broadcast address? The line below should
+        #  work, but it does not
+        self.bus.write_byte(self._lut['general_call_reset']['address'], self._lut['general_call_reset']['second_byte'])
 
     @printer
     def heater(self, heat='enable'):
