@@ -7,69 +7,13 @@ SHT85 Python wrapper library of smbus2
 
 import time
 import os
-import math
 import yaml
 import functools
 import warnings
 
+import conversion_utils as cu
+import sht
 import smbus2
-
-
-# Magnus coefficients from
-# https://sensirion.com/media/documents/8AB2AD38/61642ADD/Sensirion_AppNotes_Humidity_Sensors_Introduction_to_Relative_Humidit.pdf
-MC = {
-    'water': {
-        'alpha': 6.112,  # in hPa
-        'beta': 17.62,
-        'lambda': 243.12  # in degrees Celsius
-    },
-    'ice': {
-        'alpha': 6.112,  # in hPa
-        'beta': 22.46,
-        'lambda': 272.62  # in degrees Celsius
-    }
-}
-
-# Waiting times based on repeatability setting in seconds
-WT = {
-    'high': 0.016,
-    'medium': 0.007,
-    'low': 0.005
-}
-
-
-def hex_bytes(cmd):
-    """Returns a list of hex bytes from hex number"""
-    return [int(hex(b), 0) for b in divmod(cmd, 0x100)]
-
-
-def temp(temp_digital):
-    """Calculate temperature from data"""
-    # Significant digits based on the SHT85 resolution of 0.01 degrees Celsius
-    return round(-45 + 175 * temp_digital / (2**16 - 1), 2)
-
-
-def relative_humidity(rh_digital):
-    """Calculate relative humidity from data"""
-    # Significant digits based on the SHT85 resolution of 0.01 %RH
-    rh_analog = round(100 * rh_digital / (2**16 - 1), 2)
-    # Make sure that relative humidity never returns a 0% value, otherwise the dew point calculation will fail
-    rh_analog = 1e-3 if rh_analog < 0.01 else rh_analog
-    return rh_analog
-
-
-def dew_point(t, rh):
-    """Calculate dew point from temperature and relative humidity using Magnus formula. For more info:
-    https://sensirion.com/media/documents/8AB2AD38/61642ADD/Sensirion_AppNotes_Humidity_Sensors_Introduction_to_Relative_Humidit.pdf"""
-
-    t_range = 'water' if t >= 0 else 'ice'
-    # Define some custom constants to make the Magnus formula more readable
-    c1 = MC[t_range]['beta'] * t / (MC[t_range]['lambda'] + t)
-    c2 = math.log(rh / 100.0)
-
-    # Magnus formula for calculating the dew point
-    dew_p = MC[t_range]['lambda'] * (c2 + c1) / (MC[t_range]['beta'] - c2 - c1)
-    return round(dew_p, 2)
 
 
 def printer(func):
@@ -81,11 +25,11 @@ def printer(func):
     return wrapper
 
 
-class SHT85:
+class SHT85(sht.SHT):
     """SHT85 class"""
     def __init__(self, bus, rep, mps):
         """Constructor"""
-
+        super().__init__()
         # Open LUT with the command register addresses
         with open(os.path.join(os.path.dirname(__file__), 'sht85_cmd_register_lut.yaml'), 'r') as file:
             self._lut = yaml.safe_load(file)
@@ -175,8 +119,8 @@ class SHT85:
 
     def write_i2c_block_data_sht85(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
-        self.bus.write_i2c_block_data(self._lut['address'], hex_bytes(cmd)[0], hex_bytes(cmd)[1:])
-        time.sleep(WT[self.rep])
+        self.bus.write_i2c_block_data(self._lut['address'], cu.hex_bytes(cmd)[0], cu.hex_bytes(cmd)[1:])
+        time.sleep(cu.WT[self.rep])
 
     def read_i2c_block_data_sht85(self, length=32):
         """Wrapper function for reading block data from SHT85 sensor"""
@@ -187,11 +131,11 @@ class SHT85:
         # The measurement data consists of 6 bytes (2 for each measurement value and 1 for each checksum)
         data = self.read_i2c_block_data_sht85(6)
         temp_digital = data[0] << 8 | data[1]
-        self.t = temp(temp_digital)
+        self.t = cu.temp(temp_digital)
         rh_digital = data[3] << 8 | data[4]
-        self.rh = relative_humidity(rh_digital)
+        self.rh = cu.relative_humidity(rh_digital)
         self.check_crc(data)
-        self.dp = dew_point(self.t, self.rh)
+        self.dp = cu.dew_point(self.t, self.rh)
 
     def crc8(self, buffer):
         """CRC-8 checksum verification"""
