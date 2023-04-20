@@ -15,6 +15,8 @@ import conversion_utils as cu
 import sht
 import smbus2
 
+warnings.simplefilter('always')
+
 
 def printer(func):
     """Decorator function to Inform the user that write/read command was successful"""
@@ -148,8 +150,10 @@ class SHT85(sht.SHT):
                 if crc & 0x80:
                     crc = (crc << 1) ^ 0x31
                 else:
-                    crc = crc << 1
-            return crc & 0xFF  # return the bottom 8 bits
+                    crc <<= 1
+            # Assign the bottom 8 bits
+            crc &= 0xFF
+        return crc
 
     def check_crc(self, buffer, kw='data'):
         if buffer[2] != self.crc8(buffer[0:2]):
