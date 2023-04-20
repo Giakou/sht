@@ -105,6 +105,18 @@ class SHT85:
         self.rh = None
         self.dp = None
 
+    def __enter__(self):
+        """Enter handler"""
+        return self
+
+    def __exit__(self):
+        """Exit handler"""
+        self.close()
+
+    def close(self):
+        """Close the I2C connection"""
+        self.bus.close()
+
     @property
     def sn(self):
         """Output of the serial number"""
