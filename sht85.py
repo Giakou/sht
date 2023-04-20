@@ -95,11 +95,11 @@ class SHT85(sht.SHT):
         default_status_dict = {
             'Checksum status': '0',
             'Command status': '0',
-            'System reset': '1',
+            'System reset': '0',
             'T tracking alert': '0',
             'RH tracking alert': '0',
             'Heater status': '0',
-            'Alert pending status': '1'
+            'Alert pending status': '0'
         }
         non_default_status_dict = {key: value for key, value in status.items() if value != default_status_dict[key]}
         for key, value in non_default_status_dict.items():
@@ -117,7 +117,7 @@ class SHT85(sht.SHT):
             elif key == 'Heater status':
                 warnings.warn('Heater is ON!')
             elif key == 'Alert pending status':
-                warnings.warn('No pending alerts!')
+                warnings.warn('At least one pending alert!')
 
     def write_i2c_block_data_sht85(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
