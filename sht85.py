@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-SHT85 Python wrapper library of Adafruit_PureIO.smbus
+SHT85 Python wrapper library of smbus2
 """
 
 import time
@@ -12,7 +12,7 @@ import yaml
 import functools
 import warnings
 
-from Adafruit_PureIO import smbus
+import smbus2
 
 
 # Magnus coefficients from
@@ -98,7 +98,7 @@ class SHT85:
                                                     'only "0.5", "1", "2", "4", "10"!'
 
         # Define properties
-        self.bus = smbus.SMBus(bus)
+        self.bus = smbus2.SMBus(bus)
         self.rep = rep
         self.mps = mps
         self.t = None
