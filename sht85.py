@@ -140,22 +140,28 @@ class SHT85(sht.SHT):
         self.dp = cu.dew_point(self.t, self.rh)
 
     def crc8(self, buffer):
-        """CRC-8 checksum verification"""
-        # Initialize the checksum
+        """CRC-8 checksum calculation from data"""
+        # Initialize the checksum with a byte full of 1s
         crc = 0xFF
+        # Polynomial to divide with
+        polynomial = 0x131
         for byte in buffer:
             # Perform XOR operation between the crc and the byte
             crc ^= byte
             for _ in range(8):
-                if crc & 0x80:
-                    crc = (crc << 1) ^ 0x31
-                else:
-                    crc <<= 1
-            # Assign the bottom 8 bits
-            crc &= 0xFF
+                # Extract the leftmost bit of the CRC register
+                bit = crc & 0x80
+                # Shift the crc register by one bit to the left
+                crc <<= 1
+                # If leftmost bit is 1 perform XOR between CRC and polynomial
+                if bit:
+                    crc ^= polynomial
+            # Assign the bottom 8 bits (final XOR)
+            crc ^= 0x00
         return crc
 
     def check_crc(self, buffer, kw='data'):
+        """CRC-8 checksum verification"""
         if buffer[2] != self.crc8(buffer[0:2]):
             if kw == 'data':
                 warnings.warn('CRC Error in temperature measurement!')
