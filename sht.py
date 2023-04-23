@@ -26,14 +26,16 @@ class SHT:
         self._addr = None
         self.check_crc_bool = True
 
-    def calculate_crc(method, kw):
-        """Decorator function to check crc"""
-        @functools.wraps(method)
-        def wrapper(self, **kwargs):
-            method(self, **kwargs)
-            if self.check_crc_bool:
-                self.check_crc(kw)
-        return wrapper
+    def calculate_crc(self, kw):
+        def crc_wrapper(method):
+            """Decorator function to check crc"""
+            @functools.wraps(method)
+            def wrapper(**kwargs):
+                method(self, **kwargs)
+                if self.check_crc_bool:
+                    self.check_crc(kw)
+            return wrapper
+        return crc_wrapper()
 
     def crc8(self):
         raise NotImplementedError('This function needs to be overwritten by the child class!')
@@ -60,17 +62,22 @@ class SHT:
 
     @property
     def bus(self):
-        """Get the smbus instance"""
+        """Get the smbus attribute"""
         return self._bus
+
+    @bus.setter
+    def bus(self, value):
+        """Set the smbus attribute"""
+        raise AttributeError("The bus number which the slave device belongs to is fixed and cannot be modified!")
 
     @property
     def addr(self):
-        """Get the slave address instance"""
+        """Get the slave address attribute"""
         return self._addr
 
     @addr.setter
-    def addr(self):
-        """Get the slave address instance"""
+    def addr(self, value):
+        """Set the slave address attribute"""
         raise AttributeError("The hex address of the slave device is fixed and cannot be modified!")
 
     @calculate_crc(kw='sn')
