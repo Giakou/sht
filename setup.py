@@ -10,7 +10,7 @@ with open('requirements.txt') as f:
     install_requires = f.read().splitlines()
 
 setup(
-    name="sht85",
+    name="sht",
     version=version,
     python_requires='>=3.0',
     description='Python wrapper library of Adafruit_PureIO.smbus for Sensirion SHT85 sensors',
