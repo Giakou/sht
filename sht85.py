@@ -149,9 +149,9 @@ class SHT85(sht.SHT):
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
         rep_code = {
-            'high': 0x2400,
-            'medium': 0x240B,
-            'low': 0x2416
+            'high': [0x24, 0x00],
+            'medium': [0x24, 0x0B],
+            'low': [0x24, 0x16]
         }
         self.write_i2c_block_data_sht(rep_code[self.rep])
         self.read_data()
