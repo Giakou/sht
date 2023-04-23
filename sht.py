@@ -26,13 +26,13 @@ class SHT:
         self._addr = None
         self.check_crc_bool = True
 
-    def calculate_crc(method):
+    def calculate_crc(method, kw):
         """Decorator function to check crc"""
         @functools.wraps(method)
         def wrapper(self, **kwargs):
             method(self, **kwargs)
             if self.check_crc_bool:
-                self.check_crc()
+                self.check_crc(kw)
         return wrapper
 
     def crc8(self):
@@ -63,15 +63,30 @@ class SHT:
         """Get the smbus instance"""
         return self._bus
 
-    @calculate_crc
-    def _sn(self, sn_register):
+    @property
+    def addr(self):
+        """Get the slave address instance"""
+        return self._addr
+
+    @addr.setter
+    def addr(self):
+        """Get the slave address instance"""
+        raise AttributeError("The hex address of the slave device is fixed and cannot be modified!")
+
+    @calculate_crc(kw='sn')
+    def _sn(self, cmd):
         """Output of the serial number"""
-        self.data = self._bus.read_i2c_block_data(self._addr, sn_register, 6)
+        self.write_i2c_block_data_sht(cmd)
+        self.data = self.read_i2c_block_data_sht(6)
         return (self.data[0] << 24) + (self.data[1] << 16) + (self.data[3] << 8) + self.data[4]
 
-    def write_i2c_block_data_sht(self, slave_addr, register, data):
+    def read_i2c_block_data_sht(self, length=32):
+        return self.bus.read_i2c_block_data(self.addr, 0x00, length)
+
+    def write_i2c_block_data_sht(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
-        self.bus.write_i2c_block_data(slave_addr, register, data)
+        cmd = cu.hex_to_bytes(cmd)
+        self.bus.write_i2c_block_data(self.addr, register=cmd[0], data=cmd[1:])
         time.sleep(cu.WT[self.rep])
 
     def general_call_reset(self):

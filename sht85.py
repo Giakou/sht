@@ -58,14 +58,15 @@ class SHT85(sht.SHT):
         """Close the I2C connection"""
         self.bus.close()
 
+    @property
     def sn(self):
-        return self._sn(sn_register=0x3682)
+        return self._sn(cmd=0x3682)
 
     @property
     def status(self):
         """Read Status Register"""
-        self.write_i2c_block_data_sht85(self._lut['status'])
-        status_read = self.read_i2c_block_data_sht85(3)
+        self.write_i2c_block_data_sht(self._lut['status'])
+        status_read = self.read_i2c_block_data_sht(3)
         status = status_read[0] << 8 | status_read[1]
         status_to_bit = f'{status:016b}'
         status_dict = {
@@ -109,23 +110,15 @@ class SHT85(sht.SHT):
             elif key == 'Alert pending status':
                 warnings.warn('At least one pending alert!')
 
-    def write_i2c_block_data_sht85(self, cmd):
-        cmd = cu.hex_to_bytes(cmd)
-        self.write_i2c_block_data_sht(0x44, register=cmd[0], data=cmd[1:])
-
-    def read_i2c_block_data_sht85(self, length=32):
-        """Wrapper function for reading block data from SHT85 sensor"""
-        return self.bus.read_i2c_block_data(self._lut['address'], self._lut['read'], length)
-
     def read_data(self):
         """Readout data for Periodic Mode or ART feature and update the properties"""
         # The measurement data consists of 6 bytes (2 for each measurement value and 1 for each checksum)
-        data = self.read_i2c_block_data_sht85(6)
-        temp_digital = data[0] << 8 | data[1]
+        self.data = self.read_i2c_block_data_sht(6)
+        temp_digital = self.data[0] << 8 | self.data[1]
         self.t = cu.temp(temp_digital)
-        rh_digital = data[3] << 8 | data[4]
+        rh_digital = self.data[3] << 8 | self.data[4]
         self.rh = cu.relative_humidity(rh_digital)
-        self.check_crc(data)
+        self.check_crc(self.data)
         self.dp = cu.dew_point(self.t, self.rh)
 
     def crc8(self, buffer):
@@ -151,54 +144,54 @@ class SHT85(sht.SHT):
 
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
-        self.write_i2c_block_data_sht85(self._lut['single_shot'][self.rep])
+        self.write_i2c_block_data_sht(self._lut['single_shot'][self.rep])
         self.read_data()
 
     @printer
     def periodic(self):
         """Start Periodic Data Acquisition Mode"""
         print(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and "{self.rep}" repetition...')
-        self.write_i2c_block_data_sht85(self._lut['periodic'][self.mps][self.rep])
+        self.write_i2c_block_data_sht(self._lut['periodic'][self.mps][self.rep])
 
     @printer
     def fetch(self):
         """Fetch command to transmit the measurement data. After the transmission the data memory is cleared"""
         print('Fetching data...')
-        self.write_i2c_block_data_sht85(0xE000)
+        self.write_i2c_block_data_sht(0xE000)
 
     @printer
     def art(self):
         """Start the Accelerated Response Time (ART) feature"""
         print('Activating Accelerated Response Time (ART)...')
-        self.write_i2c_block_data_sht85(0x2B32)
+        self.write_i2c_block_data_sht(0x2B32)
 
     @printer
     def stop(self):
         """Break command to stop Periodic Data Acquisition Mode or ART feature"""
         print('Issuing Break Command...')
-        self.write_i2c_block_data_sht85(0x3093)
+        self.write_i2c_block_data_sht(0x3093)
 
     @printer
     def reset(self):
         """Apply Soft Reset"""
         self.stop()
         print('Applying Soft Reset...')
-        self.write_i2c_block_data_sht85(0x30A2)
+        self.write_i2c_block_data_sht(0x30A2)
 
     @printer
     def enable_heater(self):
         """Enable heater"""
         print('Enabling heater...')
-        self.write_i2c_block_data_sht85(0x306D)
+        self.write_i2c_block_data_sht(0x306D)
 
     @printer
     def disable_heater(self):
         """Disable heater"""
         print('Disabling heater...')
-        self.write_i2c_block_data_sht85(0x3066)
+        self.write_i2c_block_data_sht(0x3066)
 
     @printer
     def clear_status(self):
         """Clear Status Register"""
         print('Clearing Status Register...')
-        self.write_i2c_block_data_sht85(0x3041)
+        self.write_i2c_block_data_sht(0x3041)
