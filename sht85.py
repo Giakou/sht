@@ -123,7 +123,6 @@ class SHT85(sht.SHT):
         self.t = cu.temp(temp_digital)
         rh_digital = self.data[3] << 8 | self.data[4]
         self.rh = cu.relative_humidity(rh_digital)
-        self.check_crc(self.data)
         self.dp = cu.dew_point(self.t, self.rh)
 
     def crc8(self, buffer):
