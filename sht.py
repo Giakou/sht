@@ -5,6 +5,8 @@ import os
 import yaml
 import time
 import smbus2
+import functools
+import warnings
 
 import conversion_utils as cu
 
@@ -22,6 +24,34 @@ class SHT:
         # Define properties
         self._bus = smbus2.SMBus(bus)
         self._addr = None
+        self.check_crc_bool = True
+
+    def calculate_crc(method):
+        """Decorator function to check crc"""
+        @functools.wraps(method)
+        def wrapper(self, **kwargs):
+            method(self, **kwargs)
+            if self.check_crc_bool:
+                self.check_crc()
+        return wrapper
+
+    def crc8(self):
+        raise NotImplementedError('This function needs to be overwritten by the child class!')
+
+    def check_crc(self, kw='data'):
+        """CRC-8 checksum verification"""
+        if self.data[2] != self.crc8(self.data[0:2]):
+            if kw == 'data':
+                warnings.warn('CRC Error in temperature measurement!')
+            else:
+                warnings.warn('CRC Error in the first word!')
+        if self.data[5] != self.crc8(self.data[3:5]):
+            if kw == 'data':
+                warnings.warn('CRC Error in relative humidity measurement!')
+            else:
+                warnings.warn('CRC Error in the second word!')
+        if self.data[2] == self.crc8(self.data[0:2]) and self.data[5] == self.crc8(self.data[3:5]):
+            print('CRC is good')
 
     @property
     def lut(self):
@@ -33,12 +63,11 @@ class SHT:
         """Get the smbus instance"""
         return self._bus
 
-    @property
-    def _sn(self, sn_register, crc_check=True):
+    @calculate_crc
+    def _sn(self, sn_register):
         """Output of the serial number"""
-        buffer = self.read_i2c_block_data(self._addr, sn_register, 6)
-        self.check_crc(buffer, kw='sn')
-        return (buffer[0] << 24) + (buffer[1] << 16) + (buffer[3] << 8) + buffer[4]
+        self.data = self._bus.read_i2c_block_data(self._addr, sn_register, 6)
+        return (self.data[0] << 24) + (self.data[1] << 16) + (self.data[3] << 8) + self.data[4]
 
     def write_i2c_block_data_sht(self, slave_addr, register, data):
         """Wrapper function for writing block data to SHT85 sensor"""

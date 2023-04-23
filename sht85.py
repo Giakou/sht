@@ -31,7 +31,7 @@ class SHT85(sht.SHT):
     """SHT85 class"""
     def __init__(self, bus, rep, mps):
         """Constructor"""
-        super().__init__(bus)
+        super().__init__('sht85_cmd_register_lut.yaml', bus)
 
         self._addr = 0x44
         # Assertion checks
@@ -144,19 +144,6 @@ class SHT85(sht.SHT):
             # Mask the original value to ensure that it remains within the range of 8 bits (final XOR)
             crc ^= 0x00
         return crc
-
-    def check_crc(self, buffer, kw='data'):
-        """CRC-8 checksum verification"""
-        if buffer[2] != self.crc8(buffer[0:2]):
-            if kw == 'data':
-                warnings.warn('CRC Error in temperature measurement!')
-            else:
-                warnings.warn('CRC Error in the first word!')
-        if buffer[5] != self.crc8(buffer[3:5]):
-            if kw == 'data':
-                warnings.warn('CRC Error in relative humidity measurement!')
-            else:
-                warnings.warn('CRC Error in the second word!')
 
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
