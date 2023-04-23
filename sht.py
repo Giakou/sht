@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os
-import yaml
 import time
 import smbus2
 import functools
 import warnings
 
-import conversion_utils as cu
+import lib.conversion_utils as cu
 
 
 class SHT:
