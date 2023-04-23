@@ -74,6 +74,12 @@ class SHT:
         self.bus.write_i2c_block_data(slave_addr, register, data)
         time.sleep(cu.WT[self.rep])
 
+    def general_call_reset(self):
+        """General Call mode to rese all devices on the same I2C bus line (not device specific!). This command only
+        works if the device is able to process I2C commands."""
+        print('Applying General Call Reset... This is not device specific!')
+        self.bus.write_byte(0x00, 0x06)
+
     def interface_reset(self, addr):
         print('Interface reset...')
         # Toggling SDA

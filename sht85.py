@@ -109,6 +109,9 @@ class SHT85(sht.SHT):
             elif key == 'Alert pending status':
                 warnings.warn('At least one pending alert!')
 
+    def write_i2c_block_data_sht85(self, register, data):
+        self.write_i2c_block_data_sht(0x44, register, data)
+
     def read_i2c_block_data_sht85(self, length=32):
         """Wrapper function for reading block data from SHT85 sensor"""
         return self.bus.read_i2c_block_data(self._lut['address'], self._lut['read'], length)
@@ -165,28 +168,24 @@ class SHT85(sht.SHT):
     @printer
     def art(self):
         """Start the Accelerated Response Time (ART) feature"""
+        cmd = cu.hex_bytes(0x2B32)
         print('Activating Accelerated Response Time (ART)...')
-        self.write_i2c_block_data_sht85(self._lut['acc_resp_time'])
+        self.write_i2c_block_data_sht85(*cmd)
 
     @printer
     def stop(self):
         """Break command to stop Periodic Data Acquisition Mode or ART feature"""
+        cmd = cu.hex_bytes(0x3093)
         print('Issuing Break Command...')
-        self.write_i2c_block_data_sht85(self._lut['stop'])
+        self.write_i2c_block_data_sht85(*cmd)
 
     @printer
     def reset(self):
         """Apply Soft Reset"""
         self.stop()
+        cmd = cu.hex_bytes(0x30A2)
         print('Applying Soft Reset...')
-        self.write_i2c_block_data_sht85(self._lut['soft_reset'])
-
-    @printer
-    def general_call_reset(self):
-        """General Call mode to rese all devices on the same I2C bus line (not device specific!). This command only
-        works if the device is able to process I2C commands."""
-        print('Applying General Call Reset... This is not device specific!')
-        self.bus.write_byte(self._lut['general_call_reset']['address'], self._lut['general_call_reset']['second_byte'])
+        self.write_i2c_block_data_sht85(*cmd)
 
     @printer
     def heater(self, heat='enable'):
