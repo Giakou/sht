@@ -26,16 +26,17 @@ class SHT:
         self._addr = None
         self.check_crc_bool = True
 
-    def calculate_crc(self, kw):
-        def crc_wrapper(method):
-            """Decorator function to check crc"""
+    def calculate_crc(kw):
+        """Decorator function to check crc"""
+        def decorator(method):
             @functools.wraps(method)
-            def wrapper(**kwargs):
-                method(self, **kwargs)
+            def wrapper(self, **kwargs):
+                result = method(self, **kwargs)
                 if self.check_crc_bool:
                     self.check_crc(kw)
+                return result
             return wrapper
-        return crc_wrapper()
+        return decorator
 
     def crc8(self):
         raise NotImplementedError('This function needs to be overwritten by the child class!')
