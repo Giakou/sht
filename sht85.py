@@ -37,8 +37,8 @@ class SHT85(sht.SHT):
         # Assertion checks
         assert rep in ['high', 'medium', 'low'], f'Repetition number "{rep}" is not allowed, ' \
                                                  'only "high", "medium" or "low"!'
-        assert mps in ['0.5', '1', '2', '4', '10'], f'Measurements per second number "{mps}" is not allowed, ' \
-                                                    'only "0.5", "1", "2", "4", "10"!'
+        assert mps in [0.5, 1, 2, 4, 10], f'Measurements per second number "{mps}" is not allowed, '\
+                                          'only 0.5, 1, 2, 4, 10!'
 
         self.rep = rep
         self.mps = mps
