@@ -60,12 +60,16 @@ class SHT85(sht.SHT):
 
     @property
     def sn(self):
-        return self._sn(cmd=0x3682)
+        return self._sn(cmd=[0x36, 0x82])
+
+    @sn.setter
+    def sn(self, value):
+        raise AttributeError("The S/N of the slave device is unique and cannot be modified!")
 
     @property
     def status(self):
         """Read Status Register"""
-        self.write_i2c_block_data_sht(self._lut['status'])
+        self.write_i2c_block_data_sht([0xF3, 0x2D])
         status_read = self.read_i2c_block_data_sht(3)
         status = status_read[0] << 8 | status_read[1]
         status_to_bit = f'{status:016b}'
@@ -144,54 +148,86 @@ class SHT85(sht.SHT):
 
     def single_shot(self):
         """Single Shot Data Acquisition Mode"""
-        self.write_i2c_block_data_sht(self._lut['single_shot'][self.rep])
+        rep_code = {
+            'high': 0x2400,
+            'medium': 0x240B,
+            'low': 0x2416
+        }
+        self.write_i2c_block_data_sht(rep_code[self.rep])
         self.read_data()
 
     @printer
     def periodic(self):
         """Start Periodic Data Acquisition Mode"""
+        periodic_code = {
+            0.5: {
+                'high': [0x20, 0x32],
+                'medium': [0x20, 0x24],
+                'low': [0x20, 0x2F]
+            },
+            1: {
+                'high': [0x21, 0x30],
+                'medium': [0x21, 0x26],
+                'low': [0x21, 0x2D]
+            },
+            2: {
+                'high': [0x22, 0x36],
+                'medium': [0x22, 0x20],
+                'low': [0x22, 0x2B]
+            },
+            4: {
+                'high': [0x23, 0x34],
+                'medium': [0x23, 0x22],
+                'low': [0x23, 0x29]
+            },
+            10: {
+                'high': [0x27, 0x37],
+                'medium': [0x27, 0x21],
+                'low': [0x27, 0x2A]
+            }
+        }
         print(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and "{self.rep}" repetition...')
-        self.write_i2c_block_data_sht(self._lut['periodic'][self.mps][self.rep])
+        self.write_i2c_block_data_sht(periodic_code[self.mps][self.rep])
 
     @printer
     def fetch(self):
         """Fetch command to transmit the measurement data. After the transmission the data memory is cleared"""
         print('Fetching data...')
-        self.write_i2c_block_data_sht(0xE000)
+        self.write_i2c_block_data_sht([0xE0, 0x00])
 
     @printer
     def art(self):
         """Start the Accelerated Response Time (ART) feature"""
         print('Activating Accelerated Response Time (ART)...')
-        self.write_i2c_block_data_sht(0x2B32)
+        self.write_i2c_block_data_sht([0x2B, 0x32])
 
     @printer
     def stop(self):
         """Break command to stop Periodic Data Acquisition Mode or ART feature"""
         print('Issuing Break Command...')
-        self.write_i2c_block_data_sht(0x3093)
+        self.write_i2c_block_data_sht([0x30, 0x93])
 
     @printer
     def reset(self):
         """Apply Soft Reset"""
         self.stop()
         print('Applying Soft Reset...')
-        self.write_i2c_block_data_sht(0x30A2)
+        self.write_i2c_block_data_sht([0x30, 0xA2])
 
     @printer
     def enable_heater(self):
         """Enable heater"""
         print('Enabling heater...')
-        self.write_i2c_block_data_sht(0x306D)
+        self.write_i2c_block_data_sht([0x30, 0x6D])
 
     @printer
     def disable_heater(self):
         """Disable heater"""
         print('Disabling heater...')
-        self.write_i2c_block_data_sht(0x3066)
+        self.write_i2c_block_data_sht([0x30, 0x66])
 
     @printer
     def clear_status(self):
         """Clear Status Register"""
         print('Clearing Status Register...')
-        self.write_i2c_block_data_sht(0x3041)
+        self.write_i2c_block_data_sht([0x30, 0x41])

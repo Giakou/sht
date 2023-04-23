@@ -23,7 +23,7 @@ class SHT:
         self.check_crc_bool = True
 
     def calculate_crc(kw):
-        """Decorator function to check crc"""
+        """Decorator function to calculate crc"""
         def decorator(method):
             @functools.wraps(method)
             def wrapper(self, **kwargs):
