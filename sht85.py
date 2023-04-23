@@ -31,20 +31,15 @@ class SHT85(sht.SHT):
     """SHT85 class"""
     def __init__(self, bus, rep, mps):
         """Constructor"""
-        super().__init__()
-        # Open LUT with the command register addresses
-        with open(os.path.join(os.path.dirname(__file__), 'sht85_cmd_register_lut.yaml'), 'r') as file:
-            self._lut = yaml.safe_load(file)
+        super().__init__(bus)
 
+        self._addr = 0x44
         # Assertion checks
-        assert bus not in [0, 2], f'Bus number "{bus}" is not allowed, because they are reserved! Choose another one! '
         assert rep in self._lut['single_shot'].keys(), f'Repetition number "{rep}" is not allowed, ' \
                                                        'only "high", "medium" or "low"!'
         assert mps in self._lut['periodic'].keys(), f'Measurements per second number "{mps}" is not allowed, ' \
                                                     'only "0.5", "1", "2", "4", "10"!'
 
-        # Define properties
-        self.bus = smbus2.SMBus(bus)
         self.rep = rep
         self.mps = mps
         self.t = None
@@ -63,13 +58,8 @@ class SHT85(sht.SHT):
         """Close the I2C connection"""
         self.bus.close()
 
-    @property
     def sn(self):
-        """Output of the serial number"""
-        self.write_i2c_block_data_sht85(self._lut['sn'])
-        buffer = self.read_i2c_block_data_sht85(6)
-        self.check_crc(buffer, kw='sn')
-        return (buffer[0] << 24) + (buffer[1] << 16) + (buffer[3] << 8) + buffer[4]
+        return self._sn(sn_register=0x3682)
 
     @property
     def status(self):
@@ -119,11 +109,6 @@ class SHT85(sht.SHT):
             elif key == 'Alert pending status':
                 warnings.warn('At least one pending alert!')
 
-    def write_i2c_block_data_sht85(self, cmd):
-        """Wrapper function for writing block data to SHT85 sensor"""
-        self.bus.write_i2c_block_data(self._lut['address'], cu.hex_bytes(cmd)[0], cu.hex_bytes(cmd)[1:])
-        time.sleep(cu.WT[self.rep])
-
     def read_i2c_block_data_sht85(self, length=32):
         """Wrapper function for reading block data from SHT85 sensor"""
         return self.bus.read_i2c_block_data(self._lut['address'], self._lut['read'], length)
@@ -156,7 +141,7 @@ class SHT85(sht.SHT):
                 # If leftmost bit is 1 perform XOR between CRC and polynomial
                 if bit:
                     crc ^= polynomial
-            # Assign the bottom 8 bits (final XOR)
+            # Mask the original value to ensure that it remains within the range of 8 bits (final XOR)
             crc ^= 0x00
         return crc
 
