@@ -8,7 +8,7 @@ SHT85 Python wrapper library of smbus2
 import functools
 import warnings
 
-import conversion_utils as cu
+import lib.conversion_utils as cu
 import sht
 
 warnings.simplefilter('always')
