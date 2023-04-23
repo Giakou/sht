@@ -9,7 +9,10 @@ import functools
 import warnings
 
 import lib.conversion_utils as cu
+import log_utils
 import sht
+
+logger = log_utils.get_logger()
 
 warnings.simplefilter('always')
 
