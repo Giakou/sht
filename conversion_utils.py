@@ -30,7 +30,7 @@ WT = {
 }
 
 
-def hex_bytes(cmd):
+def hex_to_bytes(cmd):
     """Returns a list of hex bytes from hex number"""
     return [int(hex(b), 0) for b in divmod(cmd, 0x100)]
 

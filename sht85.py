@@ -109,8 +109,9 @@ class SHT85(sht.SHT):
             elif key == 'Alert pending status':
                 warnings.warn('At least one pending alert!')
 
-    def write_i2c_block_data_sht85(self, register, data):
-        self.write_i2c_block_data_sht(0x44, register, data)
+    def write_i2c_block_data_sht85(self, cmd):
+        cmd = cu.hex_to_bytes(cmd)
+        self.write_i2c_block_data_sht(0x44, register=cmd[0], data=cmd[1:])
 
     def read_i2c_block_data_sht85(self, length=32):
         """Wrapper function for reading block data from SHT85 sensor"""
@@ -163,39 +164,41 @@ class SHT85(sht.SHT):
     def fetch(self):
         """Fetch command to transmit the measurement data. After the transmission the data memory is cleared"""
         print('Fetching data...')
-        self.write_i2c_block_data_sht85(self._lut['fetch'])
+        self.write_i2c_block_data_sht85(0xE000)
 
     @printer
     def art(self):
         """Start the Accelerated Response Time (ART) feature"""
-        cmd = cu.hex_bytes(0x2B32)
         print('Activating Accelerated Response Time (ART)...')
-        self.write_i2c_block_data_sht85(*cmd)
+        self.write_i2c_block_data_sht85(0x2B32)
 
     @printer
     def stop(self):
         """Break command to stop Periodic Data Acquisition Mode or ART feature"""
-        cmd = cu.hex_bytes(0x3093)
         print('Issuing Break Command...')
-        self.write_i2c_block_data_sht85(*cmd)
+        self.write_i2c_block_data_sht85(0x3093)
 
     @printer
     def reset(self):
         """Apply Soft Reset"""
         self.stop()
-        cmd = cu.hex_bytes(0x30A2)
         print('Applying Soft Reset...')
-        self.write_i2c_block_data_sht85(*cmd)
+        self.write_i2c_block_data_sht85(0x30A2)
 
     @printer
-    def heater(self, heat='enable'):
-        """Enable/disable heater"""
-        print(f'{heat} heater...')
-        assert heat in self._lut['heater'].keys(), 'You can only "enable" or "disable" the heater!'
-        self.write_i2c_block_data_sht85(self._lut['heater'][heat])
+    def enable_heater(self):
+        """Enable heater"""
+        print('Enabling heater...')
+        self.write_i2c_block_data_sht85(0x306D)
 
     @printer
-    def clear(self):
+    def disable_heater(self):
+        """Disable heater"""
+        print('Disabling heater...')
+        self.write_i2c_block_data_sht85(0x3066)
+
+    @printer
+    def clear_status(self):
         """Clear Status Register"""
-        print('Clearing Register Status...')
-        self.write_i2c_block_data_sht85(self._lut['clear_status'])
+        print('Clearing Status Register...')
+        self.write_i2c_block_data_sht85(0x3041)
