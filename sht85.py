@@ -114,6 +114,7 @@ class SHT85(sht.SHT):
             elif key == 'Alert pending status':
                 warnings.warn('At least one pending alert!')
 
+    @calculate_crc(kw='data')
     def read_data(self):
         """Readout data for Periodic Mode or ART feature and update the properties"""
         # The measurement data consists of 6 bytes (2 for each measurement value and 1 for each checksum)
