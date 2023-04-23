@@ -31,13 +31,13 @@ class SHT85(sht.SHT):
     """SHT85 class"""
     def __init__(self, bus, rep, mps):
         """Constructor"""
-        super().__init__('sht85_cmd_register_lut.yaml', bus)
+        super().__init__(bus)
 
         self._addr = 0x44
         # Assertion checks
-        assert rep in self._lut['single_shot'].keys(), f'Repetition number "{rep}" is not allowed, ' \
-                                                       'only "high", "medium" or "low"!'
-        assert mps in self._lut['periodic'].keys(), f'Measurements per second number "{mps}" is not allowed, ' \
+        assert rep in ['high', 'medium', 'low'], f'Repetition number "{rep}" is not allowed, ' \
+                                                 'only "high", "medium" or "low"!'
+        assert mps in ['0.5', '1', '2', '4', '10'], f'Measurements per second number "{mps}" is not allowed, ' \
                                                     'only "0.5", "1", "2", "4", "10"!'
 
         self.rep = rep

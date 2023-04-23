@@ -30,11 +30,6 @@ WT = {
 }
 
 
-def hex_to_bytes(cmd):
-    """Returns a list of hex bytes from hex number"""
-    return [int(hex(b), 0) for b in divmod(cmd, 0x100)]
-
-
 def temp(temp_digital):
     """Calculate temperature from data"""
     # Significant digits based on the SHT85 resolution of 0.01 degrees Celsius

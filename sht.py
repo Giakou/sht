@@ -13,11 +13,7 @@ import conversion_utils as cu
 
 class SHT:
 
-    def __init__(self, cmd_register_lut_yaml, bus):
-        # Open LUT with the command register addresses
-        with open(os.path.join(os.path.dirname(__file__), cmd_register_lut_yaml), 'r') as file:
-            self._lut = yaml.safe_load(file)
-
+    def __init__(self, bus):
         # Assertion checks
         assert bus not in [0, 2], f'Bus number "{bus}" is not allowed, because they are reserved! Choose another one! '
 
@@ -57,11 +53,6 @@ class SHT:
             print('CRC is good')
 
     @property
-    def lut(self):
-        """Get the LUT with the cmd register addresses"""
-        return self._lut
-
-    @property
     def bus(self):
         """Get the smbus attribute"""
         return self._bus
@@ -93,7 +84,6 @@ class SHT:
 
     def write_i2c_block_data_sht(self, cmd):
         """Wrapper function for writing block data to SHT85 sensor"""
-        cmd = cu.hex_to_bytes(cmd)
         self.bus.write_i2c_block_data(self.addr, register=cmd[0], data=cmd[1:])
         time.sleep(cu.WT[self.rep])
 
