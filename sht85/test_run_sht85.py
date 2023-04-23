@@ -19,9 +19,9 @@ if __name__ == '__main__':
         while True:
             # Single shot mode is preferred due to less current consumption (x8-x200) in idle state
             mysensor.single_shot()
-            print(f'Temperature = {mysensor.t} deg')
+            print(f'Temperature = {mysensor.t} °C')
             print(f'Relative Humidity = {mysensor.rh}%')
-            print(f'Dew Point = {mysensor.dp} degrees')
+            print(f'Dew Point = {mysensor.dp} °C')
             time.sleep(mysensor.mps)
 
     except (KeyboardInterrupt, SystemExit):
