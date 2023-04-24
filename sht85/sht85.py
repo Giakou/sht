@@ -8,10 +8,10 @@ SHT85 Python wrapper library of smbus2
 import functools
 
 import lib.conversion_utils as cu
-import log_utils
+import lib.log_utils as lu
 import sht
 
-logger = log_utils.get_logger()
+logger = lu.get_logger()
 
 
 def printer(func):
