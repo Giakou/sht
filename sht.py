@@ -6,9 +6,9 @@ import smbus2
 import functools
 
 import lib.conversion_utils as cu
-import log_utils
+import lib.log_utils as lu
 
-logger = log_utils.get_logger()
+logger = lu.get_logger()
 
 
 class SHT:
