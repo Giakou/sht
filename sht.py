@@ -4,9 +4,11 @@
 import time
 import smbus2
 import functools
-import warnings
 
 import lib.conversion_utils as cu
+import log_utils
+
+logger = log_utils.get_logger()
 
 
 class SHT:
@@ -39,16 +41,16 @@ class SHT:
         """CRC-8 checksum verification"""
         if self.data[2] != self.crc8(self.data[0:2]):
             if kw == 'data':
-                warnings.warn('CRC Error in temperature measurement!')
+                logger.warning('CRC Error in temperature measurement!')
             else:
-                warnings.warn('CRC Error in the first word!')
+                logger.warning('CRC Error in the first word!')
         if self.data[5] != self.crc8(self.data[3:5]):
             if kw == 'data':
-                warnings.warn('CRC Error in relative humidity measurement!')
+                logger.warning('CRC Error in relative humidity measurement!')
             else:
-                warnings.warn('CRC Error in the second word!')
+                logger.warning('CRC Error in the second word!')
         if self.data[2] == self.crc8(self.data[0:2]) and self.data[5] == self.crc8(self.data[3:5]):
-            print('CRC is good')
+            logger.fine('CRC is good')
 
     @property
     def bus(self):
@@ -88,11 +90,11 @@ class SHT:
     def general_call_reset(self):
         """General Call mode to rese all devices on the same I2C bus line (not device specific!). This command only
         works if the device is able to process I2C commands."""
-        print('Applying General Call Reset... This is not device specific!')
+        logger.warning('Applying General Call Reset... This is not device specific!')
         self.bus.write_byte(0x00, 0x06)
 
     def interface_reset(self, addr):
-        print('Interface reset...')
+        logger.info('Interface reset...')
         # Toggling SDA
         for i in range(9):
             self.bus.write_byte(addr, 0xFF)
