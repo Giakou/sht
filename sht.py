@@ -50,7 +50,7 @@ class SHT:
             else:
                 logger.warning('CRC Error in the second word!')
         if self.data[2] == self.crc8(self.data[0:2]) and self.data[5] == self.crc8(self.data[3:5]):
-            logger.fine('CRC is good')
+            logger.debug('CRC is good')
 
     @property
     def bus(self):

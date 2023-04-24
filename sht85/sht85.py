@@ -6,7 +6,6 @@ SHT85 Python wrapper library of smbus2
 """
 
 import functools
-import warnings
 
 import lib.conversion_utils as cu
 import log_utils
@@ -14,15 +13,13 @@ import sht
 
 logger = log_utils.get_logger()
 
-warnings.simplefilter('always')
-
 
 def printer(func):
     """Decorator function to Inform the user that write/read command was successful"""
     @functools.wraps(func)
     def wrapper(self, **kwargs):
         func(self, **kwargs)
-        logger.fine('Done!')
+        logger.debug('Done!')
     return wrapper
 
 
@@ -98,20 +95,20 @@ class SHT85(sht.SHT):
         non_default_status_dict = {key: value for key, value in status.items() if value != default_status_dict[key]}
         for key, value in non_default_status_dict.items():
             if key == 'Checksum status':
-                warnings.warn('Checksum of last write transfer failed!')
+                logger.warning('Checksum of last write transfer failed!')
             elif key == 'Command status':
-                warnings.warn('Last command not processed! It was either invalid or failed the integrated command '
+                logger.warning('Last command not processed! It was either invalid or failed the integrated command '
                               'checksum!')
             elif key == 'System reset':
-                warnings.warn('no reset detected since last "clearstatus register" command!')
+                logger.warning('no reset detected since last "clearstatus register" command!')
             elif key == 'T tracking alert':
-                warnings.warn('T tracking alert!')
+                logger.warning('T tracking alert!')
             elif key == 'RH tracking alert':
-                warnings.warn('RH tracking alert!')
+                logger.warning('RH tracking alert!')
             elif key == 'Heater status':
-                warnings.warn('Heater is ON!')
+                logger.warningn('Heater is ON!')
             elif key == 'Alert pending status':
-                warnings.warn('At least one pending alert!')
+                logger.warning('At least one pending alert!')
 
     @sht.SHT.calculate_crc(kw='data')
     def read_data(self):
@@ -185,14 +182,14 @@ class SHT85(sht.SHT):
                 'low': [0x27, 0x2A]
             }
         }
-        logger.fine(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and '
+        logger.debug(f'Initiating Periodic Data Acquisition with frequency of "{self.mps} Hz" and '
                     f'"{self.rep}" repetition...')
         self.write_i2c_block_data_sht(periodic_code[self.mps][self.rep])
 
     @printer
     def fetch(self):
         """Fetch command to transmit the measurement data. After the transmission the data memory is cleared"""
-        logger.fine('Fetching data...')
+        logger.debug('Fetching data...')
         self.write_i2c_block_data_sht([0xE0, 0x00])
 
     @printer
@@ -211,7 +208,7 @@ class SHT85(sht.SHT):
     def reset(self):
         """Apply Soft Reset"""
         self.stop()
-        logger.fine('Applying Soft Reset...')
+        logger.debug('Applying Soft Reset...')
         self.write_i2c_block_data_sht([0x30, 0xA2])
 
     @printer
