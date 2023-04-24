@@ -1,3 +1,2 @@
-smbus2
-PyYAML
 setuptools
+smbus2
